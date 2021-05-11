@@ -106,7 +106,7 @@ bool MainInit()
 	// Register the callback function for Modbus and Emergency:
 	cConn.RegisterEventCallback(MMCPP_EMCY,(void*)Emergency_Received) ;
 
-	int ref=getAxisRef("Inf01-HC");
+	int ref=getAxisRef("g01");
 
 	MMC_DOWNLOADFOEEX_IN in;
 	memset(&in.pcFileName,0,256);
@@ -120,6 +120,7 @@ bool MainInit()
 	in.ucFinalState = 8; // The Ecat state to move to after the upload/download ends.
 	in.ucFileSavedInFlash=1; // 0 = Saved in RAM (/tmp), 1 = Saved in Flash (/mnt/jffs/usr)
 	in.ucDeleteFileAfterDownload=0;
+	in.ulPassword=0x20000000;
 	memset(&in.ucReservedBytes,0,32);
 	//memcpy(&(in.ucReservedBytes[0]), filename.c_str(), filename.length()); // file name to upload/download.
 
