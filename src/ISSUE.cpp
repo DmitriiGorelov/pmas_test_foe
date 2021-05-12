@@ -17,6 +17,8 @@
 #include <cmath>
 #include <sys/time.h>
 #include <list>
+#include <malloc.h>
+
 #include "ISSUE.h"
 #include "CallBack.h"
 
@@ -30,10 +32,11 @@
 int mode(1);
 std::string filename("Hello1");
 std::string slave("g01");
+std::string password("20000000");
 
 int main(int argc, char* argv[])
 {
-	if (argc>3)
+	if (argc>4)
 	{
 		int i=1; // slave name
 		{
@@ -72,10 +75,21 @@ int main(int argc, char* argv[])
 				filename=std::string(args.c_str()+1);
 			}
 		}
+
+		i=4; // password
+		{
+			linfo << "Argument #" << i << " = " << argv[i] << std::endl;
+			std::string args(argv[i]);
+
+			if (args.find("-") == 0)
+			{
+				password=std::string(args.c_str()+1);
+			}
+		}
 	}
 	else
 	{
-		lerr << "ERROR! run with parameters: -slave_name -to/from -file_name" << endl;
+		lerr << "ERROR! run with parameters: \n-slave_name (f.e. g01) \n-to/from (to means to slave from PMAS mnt/jffs/usr/, from means from slave to PMAS) \n-file_name \n-password (in hex format, f.e. 20000000 to read/write SD card)" << endl;
 		return 1;
 	}
 
@@ -115,6 +129,29 @@ int getAxisRef(const char* name)
 	return out.usAxisIdx;
 }
 
+unsigned int HexStringToUInt(const char* s)
+{
+	unsigned int v = 0;
+	while (char c = *s++)
+	{
+		if (c < '0') return 0; //invalid character
+
+		if (c > '9') //shift alphabetic characters down
+		{
+			if (c >= 'a') c -= 'a' - 'A'; //upper-case 'a' or higher
+			if (c > 'Z') return 0; //invalid character
+
+			if (c > '9') c -= 'A'-1-'9'; //make consecutive with digits
+			if (c < '9' + 1) return 0; //invalid character
+		}
+		c -= '0'; //convert char to hex digit value
+		v = v << 4; //shift left by a hex digit
+		v += c; //add the current digit
+	}
+
+	return v;
+}
+
 //	INIT
 bool MainInit()
 {
@@ -137,6 +174,7 @@ bool MainInit()
 	in.ucFinalState = 8; // The Ecat state to move to after the upload/download ends.
 	in.ucFileSavedInFlash=1; // 0 = Saved in RAM (/tmp), 1 = Saved in Flash (/mnt/jffs/usr)
 	in.ucDeleteFileAfterDownload=0;
+	in.ulPassword=HexStringToUInt(password.c_str()); // read-write SD card
 	memset(&in.ucReservedBytes,0,32);
 	//memcpy(&(in.ucReservedBytes[0]), filename.c_str(), filename.length()); // file name to upload/download.
 
