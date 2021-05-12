@@ -29,12 +29,24 @@
 
 int mode(1);
 std::string filename("Hello1");
+std::string slave("g01");
 
 int main(int argc, char* argv[])
 {
-	if (argc>2)
+	if (argc>3)
 	{
-		int i=1;
+		int i=1; // slave name
+		{
+			linfo << "Argument #" << i << " = " << argv[i] << std::endl;
+			std::string args(argv[i]);
+
+			if (args.find("-") == 0)
+			{
+				slave=std::string(args.c_str()+1);
+			}
+		}
+
+		i=2; // mode
 		{
 			linfo << "Argument #" << i << " = " << argv[i] << std::endl;
 			std::string args(argv[i]);
@@ -50,7 +62,7 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		i=2;
+		i=3; // file name
 		{
 			linfo << "Argument #" << i << " = " << argv[i] << std::endl;
 			std::string args(argv[i]);
@@ -60,6 +72,11 @@ int main(int argc, char* argv[])
 				filename=std::string(args.c_str()+1);
 			}
 		}
+	}
+	else
+	{
+		lerr << "ERROR! run with parameters: -slave_name -to/from -file_name" << endl;
+		return 1;
 	}
 
 	//	Initialize system, axes and all needed initializations
@@ -80,7 +97,7 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-int getAxisRef(char* name)
+int getAxisRef(const char* name)
 {
 	MMC_AXISBYNAME_IN in;
 	MMC_AXISBYNAME_OUT out;
@@ -106,7 +123,7 @@ bool MainInit()
 	// Register the callback function for Modbus and Emergency:
 	cConn.RegisterEventCallback(MMCPP_EMCY,(void*)Emergency_Received) ;
 
-	int ref=getAxisRef("Inf01-HC");
+	int ref=getAxisRef(slave.c_str());
 
 	MMC_DOWNLOADFOEEX_IN in;
 	memset(&in.pcFileName,0,256);
