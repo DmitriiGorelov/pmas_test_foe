@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
-		lerr << "ERROR! run with parameters: -slave_name -to/from -file_name" << endl;
+		lerr << "ERROR! run with parameters: \n-slave_name (f.e. g01) \n-to/from (to means to slave from PMAS mnt/jffs/usr/, from means from slave to PMAS) \n-file_name \n-password (in hex format, f.e. 20000000 to read/write SD card)" << endl;
 		return 1;
 	}
 
