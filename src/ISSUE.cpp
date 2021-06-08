@@ -97,9 +97,9 @@ int main(int argc, char* argv[])
 	//
 	if (MainInit())
 	{
-		while(1)
+		while(MachineSequences())
 		{
-			MachineSequences();
+
 		}
 	}
 	//
@@ -126,6 +126,7 @@ int getAxisRef(const char* name)
 		lerr << "AXIS REF ERROR: " << out.usErrorID << endl;
 		return -1;
 	}
+	linfo << "MMC_GetAxisByNameCmd for " << in.cAxisName << ": out.usAxisIdx = " << out.usAxisIdx << endl;
 	return out.usAxisIdx;
 }
 
@@ -174,45 +175,24 @@ bool MainInit()
 	in.ucFinalState = 8; // The Ecat state to move to after the upload/download ends.
 	in.ucFileSavedInFlash=1; // 0 = Saved in RAM (/tmp), 1 = Saved in Flash (/mnt/jffs/usr)
 	in.ucDeleteFileAfterDownload=0;
-	in.ulPassword=HexStringToUInt(password.c_str()); // read-write SD card
+	in.ulPassword=HexStringToUInt(password.c_str()); // password to define an action
 	memset(&in.ucReservedBytes,0,32);
 	//memcpy(&(in.ucReservedBytes[0]), filename.c_str(), filename.length()); // file name to upload/download.
 
 	MMC_DOWNLOADFOEEX_OUT out;
 
-	if (int res=MMC_DownloadFoEEx(gConnHndl, &in, &out)!=0)
+	if (0!=MMC_DownloadFoEEx(gConnHndl, &in, &out))
 	{
-		lerr << "ERROR UPLOAD #" << res << " " << out.usErrorID-65536 << endl;
+		lerr << "ERROR UPLOAD #" << " " << out.usErrorID-65536 << endl;
 		MMC_RESET_IN inr;
 		MMC_RESET_OUT outr;
 		inr.ucExecute=1;
 		MMC_ResetAsync(gConnHndl,ref,&inr,&outr);
 		usleep(100000);
-		//return false;
+		return false;
 	}
 
-	MMC_GETFOESTATUS_OUT outs;
-
-	while (true)
-	{
-		if (MMC_GetFoEStatus(gConnHndl,&outs)!=0)
-		{
-			lerr << "FOE STATUS: ERROR " << outs.usErrorID << endl;
-			return false;
-		}
-		else
-		{
-			linfo << "FOE STATUS: " << outs.sFOEStatus << " FOE PROGRESS : " << int(outs.ucProgress) << " FOE STARTED: " << int(outs.ucFOEStarted)
-					<< " FOE SLAVE <" << int(outs.pstSlavesErrorID[0].usSlaveID) << "> ERROR: <" << int(outs.pstSlavesErrorID[0].sErrorID) << ">" << std::endl;
-
-		}
-
-		usleep(100000);// sleep 100ms
-	}
-
-
-
-	return false;
+	return true;
 }
 
 void MainClose()
@@ -221,8 +201,24 @@ void MainClose()
 }
 
 //	Maschine Sequence
-void MachineSequences()
+bool MachineSequences()
 {
+	MMC_GETFOESTATUS_OUT outs;
 
+	if (0!=MMC_GetFoEStatus(gConnHndl,&outs))
+	{
+		lerr << "FOE STATUS: ERROR " << outs.usErrorID << endl;
+		return false;
+	}
+	else
+	{
+		linfo << "FOE STATUS: " << outs.sFOEStatus << " FOE PROGRESS : " << int(outs.ucProgress) << " FOE STARTED: " << int(outs.ucFOEStarted)
+				<< " FOE SLAVE <" << int(outs.pstSlavesErrorID[0].usSlaveID) << "> ERROR: <" << int(outs.pstSlavesErrorID[0].sErrorID) << ">" << std::endl;
+
+	}
+
+	usleep(100000);// sleep 100ms
+
+	return true;
 }
 

@@ -15,7 +15,7 @@
 */
 
 bool MainInit();
-void MachineSequences();
+bool MachineSequences();
 void MainClose();
 
 /*
