@@ -3,5 +3,6 @@
 /Debug_PMAS/src/ISSUE.o
 /.settings/
 /Debug_RPI3/
+*.orig
 *.pexe
 /.settings/
