@@ -1,7 +1,9 @@
 
 /Debug_PMAS/src/CallBack.o
 /Debug_PMAS/src/ISSUE.o
+/.settings/
 /Debug_RPI3/
 *.orig
 *.pexe
 /.settings/
+/.settings/*.xml

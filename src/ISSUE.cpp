@@ -31,7 +31,7 @@
 
 int mode(1);
 std::string filename("Hello1");
-std::string slave("g01");
+std::string slave("0");
 std::string password("20000000");
 
 int main(int argc, char* argv[])
@@ -161,7 +161,7 @@ bool MainInit()
 	// Register the callback function for Modbus and Emergency:
 	cConn.RegisterEventCallback(MMCPP_EMCY,(void*)Emergency_Received) ;
 
-	int ref=getAxisRef(slave.c_str());
+	int ref=std::stoi(slave);//getAxisRef(slave.c_str());
 
 	MMC_DOWNLOADFOEEX_IN in;
 	memset(&in.pcFileName,0,256);
