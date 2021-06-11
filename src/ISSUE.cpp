@@ -207,6 +207,35 @@ int getAxisRef(const char* name)
 	return out.usAxisIdx;
 }
 
+
+int getFOEPos(const char* name)
+{
+	int ref=getAxisRef(slave.c_str());
+
+	MMC_READBOOLPARAMETER_IN sReadParamIn;   // IN parameter for MMC_ReadBoolParameter
+	MMC_READBOOLPARAMETER_OUT sReadParamOut; // OUT parameter for MMC_ReadBoolParameter
+
+	sReadParamIn.eParameterNumber = (MMC_PARAMETER_LIST_ENUM)MMC_DRIVE_ID_PARAM;  // Set parameter to read – DRIVE_ID is the EtherCAT slave position
+	sReadParamIn.iParameterArrIndex = 0; //Set 0
+	sReadParamIn.ucEnable = 1; //Enable
+
+
+	// This function read a parameter
+	//     sNameOut.usAxisIdx – Axis ID that we read by MMC_GetAxisByNameCmd    
+	if (0 != MMC_ReadBoolParameter(gConnHndl, ref, &sReadParamIn, &sReadParamOut)) // result is in sReadParamOut.lValue – should be 0 since the position of b01 is 0
+	{
+		lerr << "ERROR - MMC_ReadBoolParameter failed" << endl;
+		return -1;
+	}
+	else
+	{
+		linfo << "Axis <" << name << "> FOE pos is: " << sReadParamOut.lValue << endl;
+	}
+
+	return sReadParamOut.lValue;
+
+}
+
 unsigned int HexStringToUInt(const char* s)
 {
 	unsigned int v = 0;
@@ -247,7 +276,7 @@ bool MainInit()
 	// Register the callback function for Modbus and Emergency:
 	cConn.RegisterEventCallback(MMCPP_EMCY,(void*)Emergency_Received) ;
 
-	int ref=std::stoi(slave);//getAxisRef(slave.c_str());
+	int ref = getFOEPos(slave.c_str());//std::stoi(slave);//getAxisRef(slave.c_str());
 
 	MMC_DOWNLOADFOEEX_IN in;
 	memset(&in.pcFileName,0,256);
