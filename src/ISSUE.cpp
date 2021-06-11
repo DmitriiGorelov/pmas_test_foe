@@ -15,9 +15,16 @@
 #include <signal.h>
 #include <chrono>
 #include <cmath>
-#include <sys/time.h>
 #include <list>
 #include <malloc.h>
+
+#ifdef WIN32
+//#include <windows.h>
+#include <chrono>
+#include <thread>
+#else
+#include <time.h>
+#endif
 
 #include "ISSUE.h"
 #include "CallBack.h"
@@ -26,17 +33,49 @@
 #define RED     "\033[31m"      /* Red */
 #define GREEN   "\033[32m"      /* Green */
 
+#ifdef WIN32
+#define linfo std::cout 
+#define lerr std::cout  
+#else
 #define linfo std::cout << RESET << GREEN
 #define lerr std::cout << RESET << RED
+#endif
 
 int mode(1);
 std::string filename("Hello1");
 std::string slave("0");
 std::string password("20000000");
+std::string hostaddress("192.168.35.5");
+std::string pmasaddress("192.168.35.10");
+
+void uswait(int us)
+{
+	#ifdef WIN32
+		/*HANDLE timer;
+		LARGE_INTEGER ft;
+
+		ft.QuadPart = -(10 * us); // Convert to 100 nanosecond interval, negative value indicates relative time
+
+		timer = CreateWaitableTimer(NULL, TRUE, NULL);
+		SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
+		WaitForSingleObject(timer, INFINITE);
+		CloseHandle(timer);*/
+
+		std::this_thread::sleep_for(std::chrono::microseconds(us));
+	#else
+		usleep(us);
+	#endif
+}
+
+#ifdef WIN32
+const int ac = 6;
+#else
+const int ac = 4;
+#endif
 
 int main(int argc, char* argv[])
 {
-	if (argc>4)
+	if (argc>ac)
 	{
 		int i=1; // slave name
 		{
@@ -49,7 +88,7 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		i=2; // mode
+		i++; // mode
 		{
 			linfo << "Argument #" << i << " = " << argv[i] << std::endl;
 			std::string args(argv[i]);
@@ -57,7 +96,6 @@ int main(int argc, char* argv[])
 			if (args.find("-") == 0)
 			{
 				args=std::string(args.c_str()+1);
-				linfo << args << endl;
 				if (args=="to")
 					mode=2;
 				if (args=="from")
@@ -65,7 +103,7 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		i=3; // file name
+		i++; // file name
 		{
 			linfo << "Argument #" << i << " = " << argv[i] << std::endl;
 			std::string args(argv[i]);
@@ -76,7 +114,7 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		i=4; // password
+		i++; // password
 		{
 			linfo << "Argument #" << i << " = " << argv[i] << std::endl;
 			std::string args(argv[i]);
@@ -86,10 +124,49 @@ int main(int argc, char* argv[])
 				password=std::string(args.c_str()+1);
 			}
 		}
+
+#ifdef WIN32
+		i++; // host IP
+		{
+			linfo << "Argument #" << i << " = " << argv[i] << std::endl;
+			std::string args(argv[i]);
+
+			if (args.find("-") == 0)
+			{
+				hostaddress = std::string(args.c_str() + 1);
+			}
+		}
+
+		i++; // pmas IP
+		{
+			linfo << "Argument #" << i << " = " << argv[i] << std::endl;
+			std::string args(argv[i]);
+
+			if (args.find("-") == 0)
+			{
+				pmasaddress = std::string(args.c_str() + 1);
+			}
+		}
+#else
+#endif
+
 	}
 	else
 	{
-		lerr << "ERROR! run with parameters: \n-slave_name (f.e. g01) \n-to/from (to means to slave from PMAS mnt/jffs/usr/, from means from slave to PMAS) \n-file_name \n-password (in hex format, f.e. 20000000 to read/write SD card)" << endl;
+		lerr << "ERROR! run with parameters: \n" <<
+			"-slave_name (f.e. \"g01\") \n" <<
+			"-to/from (to means to slave from PMAS mnt/jffs/usr/, from means from slave to PMAS) \n" <<
+			"-file_name \n" <<
+			"-password (in hex format, f.e. \"-20000000\" to read/write SD card)\n";
+#ifdef WIN32
+		lerr <<
+			"-host_ip (f.e. \"-192.168.35.5)\" \n" <<
+			"-pmas_ip (f.e. \"-192.168.35.10)\" \n";
+#else
+#endif
+
+			
+		lerr << endl;
 		return 1;
 	}
 
@@ -116,7 +193,7 @@ int getAxisRef(const char* name)
 	MMC_AXISBYNAME_IN in;
 	MMC_AXISBYNAME_OUT out;
 #ifdef WIN32
-	strcpy_s(in.cAxisName, name.c_str());
+	strcpy_s(in.cAxisName, name);
 #else
 	strcpy(in.cAxisName, name);
 #endif
@@ -155,8 +232,17 @@ unsigned int HexStringToUInt(const char* s)
 
 //	INIT
 bool MainInit()
-{
-	gConnHndl = cConn.ConnectIPCEx(0x7fffffff, NULL) ;
+{	
+#if WIN32
+	linfo << "host: " << hostaddress << " PMAS: " << pmasaddress << std::endl;
+	gConnHndl = cConn.ConnectRPCEx(const_cast<char*>(hostaddress.c_str()), const_cast<char*>(pmasaddress.c_str()),
+		0x7fffffff, reinterpret_cast<MMC_MB_CLBK>(CallbackFunc));
+#else
+	gConnHndl = cConn.ConnectIPCEx(0x7fffffff, (MMC_MB_CLBK)CallbackFunc);
+#endif
+
+
+	//gConnHndl = cConn.ConnectIPCEx(0x7fffffff, NULL) ;
 
 	// Register the callback function for Modbus and Emergency:
 	cConn.RegisterEventCallback(MMCPP_EMCY,(void*)Emergency_Received) ;
@@ -188,7 +274,7 @@ bool MainInit()
 		MMC_RESET_OUT outr;
 		inr.ucExecute=1;
 		MMC_ResetAsync(gConnHndl,ref,&inr,&outr);
-		usleep(100000);
+		uswait(100000);
 		return false;
 	}
 
@@ -217,7 +303,7 @@ bool MachineSequences()
 
 	}
 
-	usleep(100000);// sleep 100ms
+	uswait(100000);// sleep 100ms
 
 	return true;
 }
